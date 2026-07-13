@@ -15,7 +15,7 @@ namespace KnuckleBones
         public static Texture2D[] WhiteDice = new Texture2D[7];
         public static Texture2D[] BlackDice = new Texture2D[7];
         public static Texture2D Background;
-        
+
         private struct Star
         {
             public Vector3 Position;
@@ -52,7 +52,7 @@ namespace KnuckleBones
                 WhiteDice[i] = Raylib.LoadTexture(Path.Combine(resourcesPath, "img", $"{i}_white.png"));
                 BlackDice[i] = Raylib.LoadTexture(Path.Combine(resourcesPath, "img", $"{i}_black.png"));
             }
-            
+
             for (int i = 0; i < StarCount; i++)
                 ResetStar(ref starfield[i], true);
         }
@@ -85,7 +85,7 @@ namespace KnuckleBones
 
             Color lightBlue = new Color(100, 200, 255, 255);
             Raylib.DrawLineEx(new Vector2(ScreenWidth / 2, 0), new Vector2(ScreenWidth / 2, ScreenHeight), 2, lightBlue);
-            
+
             DrawPlayerGrid(state.Player1Board, 20, true, lightBlue);
             DrawPlayerGrid(state.Player2Board, 320, false, lightBlue);
 
@@ -95,7 +95,7 @@ namespace KnuckleBones
             if (state.GameOver)
             {
                 string winner = state.Player1Score > state.Player2Score ? "Player Wins!" : (state.Player1Score == state.Player2Score ? "Draw!" : "AI Wins!");
-                int overlayY = (ScreenHeight - 220) / 2 + 50; 
+                int overlayY = (ScreenHeight - 220) / 2 + 50;
                 Raylib.DrawRectangle(0, overlayY, ScreenWidth, 120, new Color(0, 0, 0, 220));
                 Vector2 winnerSize = Raylib.MeasureTextEx(GameFont, winner, 40, 2);
                 Raylib.DrawTextEx(GameFont, winner, new Vector2((ScreenWidth - winnerSize.X) / 2, overlayY + 20), 40, 2, Color.Yellow);
@@ -108,7 +108,7 @@ namespace KnuckleBones
                 Texture2D rollTex = state.Player1Turn ? WhiteDice[state.CurrentDie] : BlackDice[state.CurrentDie];
                 Raylib.DrawTextureEx(rollTex, new Vector2(ScreenWidth/2 - (rollTex.Width * 0.5f)/2, 35), 0, 0.5f, Color.White);
                 string turnText = state.Player1Turn ? "<< Your Turn" : "AI Thinking >>";
-                Raylib.DrawTextEx(GameFont, turnText, new Vector2(ScreenWidth/2 - 60, 95), 20, 2, state.Player1Turn ? Color.White : Color.Gray);
+                Raylib.DrawTextEx(GameFont, turnText, new Vector2(ScreenWidth/2 - 60, 125), 20, 2, state.Player1Turn ? Color.White : Color.Gray);
             }
             DrawDifficultySelector(state);
         }
