@@ -15,7 +15,7 @@ run:
 # Requires syft and grype to be installed
 sbom:
 	@echo "Generating SBOM with syft..."
-	syft dir:. -o cyclonedx-json > sbom.json
+	syft dir:. --source-name KnuckleBones --source-version 1.0.0 -o cyclonedx-json > sbom.json
 	@echo "Scanning SBOM for vulnerabilities with grype..."
 	grype sbom.json
 

@@ -93,9 +93,19 @@ namespace KnuckleBones
             {
                 string winner = state.Player1Score > state.Player2Score ? "Player Wins!" : "AI Wins!";
                 if (state.Player1Score == state.Player2Score) winner = "Draw!";
-                Raylib.DrawRectangle(0, 250, 600, 100, new Color(0, 0, 0, 200));
-                Raylib.DrawTextEx(GameFont, winner, new System.Numerics.Vector2(ScreenWidth/2 - 100, ScreenHeight/2 - 25), 40, 2, Color.Yellow);
-                Raylib.DrawTextEx(GameFont, "Press R to Restart", new System.Numerics.Vector2(ScreenWidth/2 - 80, ScreenHeight/2 + 20), 20, 2, Color.White);
+
+                // Centering logic
+                int overlayHeight = 120;
+                int overlayY = (ScreenHeight - 100 - overlayHeight) / 2 + 50; // Center vertically in the play area (above difficulty)
+
+                Raylib.DrawRectangle(0, overlayY, ScreenWidth, overlayHeight, new Color(0, 0, 0, 220));
+
+                Vector2 winnerSize = Raylib.MeasureTextEx(GameFont, winner, 40, 2);
+                Raylib.DrawTextEx(GameFont, winner, new Vector2((ScreenWidth - winnerSize.X) / 2, overlayY + 20), 40, 2, Color.Yellow);
+
+                string restartText = "Press R to Restart";
+                Vector2 restartSize = Raylib.MeasureTextEx(GameFont, restartText, 20, 2);
+                Raylib.DrawTextEx(GameFont, restartText, new Vector2((ScreenWidth - restartSize.X) / 2, overlayY + 75), 20, 2, Color.White);
             }
             else
             {
