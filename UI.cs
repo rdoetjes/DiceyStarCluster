@@ -14,7 +14,7 @@ namespace DiceyStarCluster
         private static Font GameFont;
         private readonly static Texture2D[] WhiteDice = new Texture2D[7];
         private readonly static Texture2D[] BlackDice = new Texture2D[7];
-        private static Texture2D BgImg = new();
+        private static Texture2D BgImg;
 
         private struct Star
         {
@@ -35,8 +35,6 @@ namespace DiceyStarCluster
             {
                 string potentialPath = Path.Combine(currentDir, "resources");
                 if (Directory.Exists(potentialPath)) { resourcesPath = potentialPath; break; }
-                potentialPath = Path.Combine(currentDir, "diceystarcluster", "resources");
-                if (Directory.Exists(potentialPath)) { resourcesPath = potentialPath; break; }
                 currentDir = Path.GetDirectoryName(currentDir) ?? "";
             }
 
@@ -52,6 +50,7 @@ namespace DiceyStarCluster
                 WhiteDice[i] = Raylib.LoadTexture(Path.Combine(resourcesPath, "img", $"{i}_white.png"));
                 BlackDice[i] = Raylib.LoadTexture(Path.Combine(resourcesPath, "img", $"{i}_black.png"));
             }
+
             BgImg = Raylib.LoadTexture(Path.Combine(resourcesPath, "img", "bg.png"));
 
             for (int i = 0; i < StarCount; i++)
@@ -89,6 +88,9 @@ namespace DiceyStarCluster
             Raylib.DrawTextureEx(BgImg, new Vector2(-400,-200), 0.0f, 2.0f, Color.White);
 
             DrawWarpStarfield();
+
+            // Draw Gradient Vertical Divider (9 pixels wide for symmetry)
+            DrawGradientLine(new Vector2(ScreenWidth / 2, 0), new Vector2(ScreenWidth / 2, ScreenHeight), 9);
 
             int totalGridWidth = 3 * 100 - 20; // 3 cells (80) + 2 spacings (20)
             int p1StartX = (ScreenWidth / 2 - totalGridWidth) / 2;
@@ -184,19 +186,134 @@ namespace DiceyStarCluster
             Raylib.DrawRectangle(0, 0, ScreenWidth, ScreenHeight, new Color(0, 0, 0, 60));
         }
 
-        private static Color ColorFromHSV(float hue, float saturation, float value)
+        private static void DrawPlayerGrid(GameState state, int[][] grid, int startX, bool isWhite, Color baseColor, bool isPlayer1)
         {
-            float c = value * saturation;
-            float x = c * (1 - Math.Abs((hue / 60) % 2 - 1));
-            float m = value - c;
-            float r = 0, g = 0, b = 0;
-            if (hue < 60) { r = c; g = x; }
-            else if (hue < 120) { r = x; g = c; }
-            else if (hue < 180) { g = c; b = x; }
-            else if (hue < 240) { g = x; b = c; }
-            else if (hue < 300) { r = x; b = c; }
-            else { r = c; b = x; }
-            return new Color((byte)((r + m) * 255), (byte)((g + m) * 255), (byte)((b + m) * 255), (byte)255);
+            int spacing = 100;
+            int hoveredCol = GetHoveredColumn(startX, spacing);
+
+            for (int col = 0; col < 3; col++)
+            {
+                for (int row = 0; row < 3; row++)
+                {
+                    DrawGridCell(state, grid, startX, col, row, spacing, isWhite, isPlayer1, hoveredCol);
+                }
+                DrawColumnScore(grid, startX, col, spacing);
+            }
+
+            for (int row = 0; row < 3; row++)
+            {
+                DrawRowScore(grid, startX, row, spacing, isPlayer1);
+            }
+        }
+
+        private static int GetHoveredColumn(int gridStartX, int spacing)
+        {
+            Vector2 mousePos = Raylib.GetMousePosition();
+            int gridWidth = 3 * spacing - 20;
+            int gridHeight = 3 * spacing - 20;
+
+            // We only care about hover for Player 1's interactions/previews
+            // but the function needs to know which grid it's checking.
+            // For simplicity in the refactored version, we check if the mouse is in the bounds provided.
+            if (mousePos.X >= gridStartX && mousePos.X <= gridStartX + gridWidth &&
+                mousePos.Y >= 150 && mousePos.Y <= 150 + gridHeight)
+            {
+                return (int)((mousePos.X - gridStartX) / spacing);
+            }
+            return -1;
+        }
+
+        private static void DrawGridCell(GameState state, int[][] grid, int startX, int col, int row, int spacing, bool isWhite, bool isPlayer1, int hoveredCol)
+        {
+            int x = startX + col * spacing;
+            int y = 150 + row * spacing;
+            Rectangle rect = new Rectangle(x, y, 80, 80);
+
+            // 1. Destruction Preview
+            if (!isPlayer1 && hoveredCol != -1 && state.Player1Turn && !state.GameOver)
+            {
+                Vector2 mousePos = Raylib.GetMousePosition();
+                int targetRow = (int)((mousePos.Y - 150) / spacing);
+                if (targetRow >= 0 && targetRow < 3)
+                {
+                    if ((col == hoveredCol || row == targetRow) && grid[col][row] == state.CurrentDie && grid[col][row] > 0)
+                    {
+                        Raylib.DrawRectangleRec(rect, new Color(255, 0, 0, 100));
+                    }
+                }
+            }
+
+            // 2. Cell Background
+            DrawGradientRoundedRect(rect, 0.2f, 9);
+
+            // 3. AI Last Move Highlight
+            if (!isPlayer1 && state.AILastMove.HasValue)
+            {
+                var lastMove = state.AILastMove.Value;
+                if (lastMove.Col == col && lastMove.Row == row)
+                {
+                    float elapsed = (float)Raylib.GetTime() - lastMove.Time;
+                    if (elapsed < 1.5f)
+                    {
+                        float alpha = 1.0f - (elapsed / 1.5f);
+                        Color highlight = Color.SkyBlue;
+                        highlight.A = (byte)(alpha * 200);
+                        Raylib.DrawRectangleRounded(rect, 0.2f, 16, highlight);
+                    }
+                }
+            }
+
+            // 4. Dice Texture
+            if (grid[col][row] > 0)
+            {
+                Texture2D tex = isWhite ? WhiteDice[grid[col][row]] : BlackDice[grid[col][row]];
+                float scale = 80f / tex.Width * 0.8f;
+                Raylib.DrawTextureEx(tex, new Vector2(x + (80 - tex.Width * scale) / 2, y + (80 - tex.Height * scale) / 2), 0, scale, Color.White);
+            }
+        }
+
+        private static void DrawColumnScore(int[][] grid, int startX, int col, int spacing)
+        {
+            int[] colValues = Rules.GetColValues(grid, col);
+            int colScore = Rules.GetLineScore(colValues);
+            string text = colScore.ToString();
+            Vector2 size = Raylib.MeasureTextEx(GameFont, text, 18, 2);
+            Color color = GetComboColor(colValues);
+
+            Raylib.DrawTextEx(GameFont, text, new Vector2(startX + col * spacing + (80 - size.X) / 2, 150 + 3 * spacing + 5), 18, 2, color);
+        }
+
+        private static void DrawRowScore(int[][] grid, int startX, int row, int spacing, bool isPlayer1)
+        {
+            int[] rowValues = Rules.GetRowValues(grid, row);
+            int rowScore = Rules.GetLineScore(rowValues);
+            string text = rowScore.ToString();
+            Vector2 size = Raylib.MeasureTextEx(GameFont, text, 18, 2);
+            Color color = GetComboColor(rowValues);
+
+            float y = 150 + row * spacing + (80 - size.Y) / 2;
+            if (isPlayer1)
+                Raylib.DrawTextEx(GameFont, text, new Vector2(startX - size.X - 15, y), 18, 2, color);
+            else
+                Raylib.DrawTextEx(GameFont, text, new Vector2(startX + 3 * spacing - 20 + 15, y), 18, 2, color);
+        }
+
+        private static Color GetComboColor(int[] values)
+        {
+            var counts = new Dictionary<int, int>();
+            int maxCount = 0;
+            foreach (int v in values)
+            {
+                if (v > 0)
+                {
+                    if (!counts.ContainsKey(v)) counts[v] = 0;
+                    counts[v]++;
+                    maxCount = Math.Max(maxCount, counts[v]);
+                }
+            }
+            if (maxCount == 2) return Color.Yellow;
+            if (maxCount == 3) return Color.Orange;
+            return Color.SkyBlue;
         }
 
         private static void DrawDifficultySelector(GameState state)
@@ -214,150 +331,6 @@ namespace DiceyStarCluster
                 Raylib.DrawRectangleLinesEx(rect, 2, Color.White);
                 Vector2 textSize = Raylib.MeasureTextEx(GameFont, diffs[i].ToString(), 18, 2);
                 Raylib.DrawTextEx(GameFont, diffs[i].ToString(), new Vector2(x + (100 - textSize.X)/2, startY - 10 + (40 - textSize.Y)/2), 18, 2, state.CurrentDifficulty == diffs[i] ? Color.Black : Color.White);
-            }
-        }
-
-        private static void DrawPlayerGrid(GameState state, int[][] grid, int startX, bool isWhite, Color baseColor, bool isPlayer1)
-        {
-            int spacing = 100;
-            Vector2 mousePos = Raylib.GetMousePosition();
-            int hoveredCol = -1;
-
-            // Calculate Grid Bounds for Hover
-            int gridWidth = 3 * spacing - 20;
-            int gridHeight = 3 * spacing - 20;
-
-            // Check if mouse is hovering over Player 1's grid (the only interactive one)
-            if (state.Player1Turn && !state.GameOver)
-            {
-                int totalGridWidth = 3 * 100 - 20;
-                int p1StartX = (ScreenWidth / 2 - totalGridWidth) / 2;
-
-                if (mousePos.X >= p1StartX && mousePos.X <= p1StartX + gridWidth &&
-                    mousePos.Y >= 150 && mousePos.Y <= 150 + gridHeight)
-                {
-                    hoveredCol = (int)((mousePos.X - p1StartX) / spacing);
-                }
-            }
-
-            for (int col = 0; col < 3; col++)
-            {
-                for (int row = 0; row < 3; row++)
-                {
-                    int x = startX + col * spacing;
-                    int y = 150 + row * spacing;
-
-                    Rectangle rect = new Rectangle(x, y, 80, 80);
-
-                    // Option 4: Destruction Preview
-                    // If we are drawing the AI's board (not isPlayer1) and P1 is hovering a column/row,
-                    // highlight matching dice in that same row or column on the AI's side.
-                    bool isTargeted = false;
-                    if (!isPlayer1 && hoveredCol != -1)
-                    {
-                        // Find what row the die WOULD land in if the user clicks this cell
-                        // Since we now allow clicking specific cells, we check the specific row.
-                        int targetRow = (int)((mousePos.Y - 150) / spacing);
-
-                        if (targetRow >= 0 && targetRow < 3)
-                        {
-                            // Check Column Destruction (Vertical)
-                            if (col == hoveredCol && grid[col][row] == state.CurrentDie)
-                            {
-                                isTargeted = true;
-                            }
-                            // Check Row Destruction (Horizontal)
-                            if (row == targetRow && grid[col][row] == state.CurrentDie)
-                            {
-                                isTargeted = true;
-                            }
-                        }
-                    }
-
-                    if (isTargeted)
-                    {
-                        // Draw a red "target" highlight
-                        Raylib.DrawRectangleRec(rect, new Color(255, 0, 0, 100));
-                    }
-
-                    DrawGradientRoundedRect(rect, 0.2f, 9);
-
-                    // Draw AI Move Highlight
-                    if (!isPlayer1 && state.AILastMove.HasValue)
-                    {
-                        var lastMove = state.AILastMove.Value;
-                        if (lastMove.Col == col && lastMove.Row == row)
-                        {
-                            float elapsed = (float)Raylib.GetTime() - lastMove.Time;
-                            if (elapsed < 1.5f)
-                            {
-                                float alpha = 1.0f - (elapsed / 1.5f);
-                                Color highlight = Color.SkyBlue;
-                                highlight.A = (byte)(alpha * 200);
-                                Raylib.DrawRectangleRounded(rect, 0.2f, 16, highlight);
-                            }
-                        }
-                    }
-
-                    if (grid[col][row] > 0)
-                    {
-                        Texture2D tex = isWhite ? WhiteDice[grid[col][row]] : BlackDice[grid[col][row]];
-                        float scale = 80f / tex.Width * 0.8f;
-                        Raylib.DrawTextureEx(tex, new Vector2(x + (80 - tex.Width * scale) / 2, y + (80 - tex.Height * scale) / 2), 0, scale, Color.White);
-                    }
-                }
-
-                // Draw Column Score Below
-                int[] colValues = Rules.GetColValues(grid, col);
-                int colScore = Rules.GetLineScore(colValues);
-                string colScoreText = colScore.ToString();
-                Vector2 colScoreSize = Raylib.MeasureTextEx(GameFont, colScoreText, 18, 2);
-
-                // Color logic for combos
-                Color colColor = Color.SkyBlue;
-                var counts = new Dictionary<int, int>();
-                int maxCount = 0;
-                foreach(int v in colValues) if(v > 0) {
-                    if(!counts.ContainsKey(v)) counts[v] = 0;
-                    counts[v]++;
-                    maxCount = Math.Max(maxCount, counts[v]);
-                }
-                if (maxCount == 2) colColor = Color.Yellow;
-                else if (maxCount == 3) colColor = Color.Orange;
-
-                Raylib.DrawTextEx(GameFont, colScoreText, new Vector2(startX + col * spacing + (80 - colScoreSize.X) / 2, 150 + 3 * spacing + 5), 18, 2, colColor);
-            }
-
-            for (int row = 0; row < 3; row++)
-            {
-                // Draw Row Score
-                int[] rowValues = Rules.GetRowValues(grid, row);
-                int rowScore = Rules.GetLineScore(rowValues);
-                string rowScoreText = rowScore.ToString();
-                Vector2 rowScoreSize = Raylib.MeasureTextEx(GameFont, rowScoreText, 18, 2);
-
-                // Color logic for combos
-                Color rowColor = Color.SkyBlue;
-                var counts = new Dictionary<int, int>();
-                int maxCount = 0;
-                foreach(int v in rowValues) if(v > 0) {
-                    if(!counts.ContainsKey(v)) counts[v] = 0;
-                    counts[v]++;
-                    maxCount = Math.Max(maxCount, counts[v]);
-                }
-                if (maxCount == 2) rowColor = Color.Yellow;
-                else if (maxCount == 3) rowColor = Color.Orange;
-
-                if (isPlayer1)
-                {
-                    // Draw on the LEFT
-                    Raylib.DrawTextEx(GameFont, rowScoreText, new Vector2(startX - rowScoreSize.X - 15, 150 + row * spacing + (80 - rowScoreSize.Y) / 2), 18, 2, rowColor);
-                }
-                else
-                {
-                    // Draw on the RIGHT
-                    Raylib.DrawTextEx(GameFont, rowScoreText, new Vector2(startX + 3 * spacing - 20 + 15, 150 + row * spacing + (80 - rowScoreSize.Y) / 2), 18, 2, rowColor);
-                }
             }
         }
 
