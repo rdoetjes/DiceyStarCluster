@@ -39,6 +39,7 @@ if [ -d "$PUBLISH_DIR/linux-x64/publish" ]; then
     TEMP_LINUX="temp_linux"
     mkdir -p "$TEMP_LINUX"
     cp -r "$PUBLISH_DIR/linux-x64/publish/"* "$TEMP_LINUX/"
+    cp -r resources "$TEMP_LINUX/"
     cd "$TEMP_LINUX"
     tar -czvf "../$DIST_DIR/${APP_NAME}-linux-x64.tar.gz" .
     cd ..
@@ -118,6 +119,7 @@ if [ -d "$PUBLISH_DIR/win-x64/publish" ]; then
     TEMP_WIN="temp_win"
     mkdir -p "$TEMP_WIN"
     cp -r "$PUBLISH_DIR/win-x64/publish/"* "$TEMP_WIN/"
+    cp -r resources "$TEMP_WIN/"
     cd "$TEMP_WIN"
     zip -r "../$DIST_DIR/${APP_NAME}-win-x64.zip" .
     cd ..
