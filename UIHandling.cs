@@ -1,7 +1,7 @@
 using Raylib_cs;
 using System.Numerics;
 
-namespace KnuckleBones
+namespace DiceyStarCluster
 {
     public class UIHandling
     {

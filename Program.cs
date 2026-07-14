@@ -1,12 +1,12 @@
 ﻿using Raylib_cs;
 
-namespace KnuckleBones
+namespace DiceyStarCluster
 {
     class Program
     {
         static void Main(string[] args)
         {
-            Raylib.InitWindow(UI.ScreenWidth, UI.ScreenHeight, "Knuckle Bones");
+            Raylib.InitWindow(UI.ScreenWidth, UI.ScreenHeight, "Dicey Star Cluster");
             Raylib.SetTargetFPS(30);
 
             UI.LoadResources();

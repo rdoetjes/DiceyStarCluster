@@ -5,17 +5,16 @@ all: run
 
 # Run the test suite
 tests:
-	dotnet test --logger "console;verbosity=detailed" KnuckleBonesTests/KnuckleBonesTests.csproj
+	dotnet test --logger "console;verbosity=detailed" DiceyStarClusterTests/DiceyStarClusterTests.csproj
 
 # Run the application
 run:
-	dotnet run --project KnuckleBonesApp.csproj
+	dotnet run --project DiceyStarCluster.csproj
 
 # Generate SBOM and scan for vulnerabilities
-# Requires syft and grype to be installed
 sbom:
 	@echo "Generating SBOM with syft..."
-	syft dir:. --source-name KnuckleBones --source-version 1.0.0 -o cyclonedx-json > sbom.json
+	syft dir:. --source-name DiceyStarCluster --source-version 1.0.0 -o cyclonedx-json > sbom.json
 	@echo "Scanning SBOM for vulnerabilities with grype..."
 	grype sbom.json
 

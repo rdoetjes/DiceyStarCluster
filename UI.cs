@@ -4,7 +4,7 @@ using System.Numerics;
 using System.IO;
 using System;
 
-namespace KnuckleBones
+namespace DiceyStarCluster
 {
     public class UI
     {

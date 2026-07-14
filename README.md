@@ -1,6 +1,6 @@
-# KnuckleBones (C# + RayLib)
+# Dicey Star Cluster (C# + RayLib)
 
-A faithful recreation of the KnuckleBones dice game using C# and RayLib-cs, with enhanced dual-axis strategic depth.
+A faithful recreation of the KnuckleBones dice game with enhanced dual-axis strategic depth, set in the deep reaches of space.
 
 ## Game Rules
 

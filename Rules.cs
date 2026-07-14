@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace KnuckleBones
+namespace DiceyStarCluster
 {
     public static class Rules
     {

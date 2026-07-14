@@ -1,6 +1,6 @@
 using Raylib_cs;
 
-namespace KnuckleBones
+namespace DiceyStarCluster
 {
     public class GameState
     {

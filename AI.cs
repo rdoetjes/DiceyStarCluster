@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System;
 
-namespace KnuckleBones
+namespace DiceyStarCluster
 {
     public class AI
     {
