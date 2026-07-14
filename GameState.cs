@@ -13,6 +13,14 @@ namespace DiceyStarCluster
         public bool GameOver = false;
         public Difficulty CurrentDifficulty = Difficulty.Medium;
 
+        public struct LastMove
+        {
+            public int Col;
+            public int Row;
+            public float Time;
+        }
+        public LastMove? AILastMove = null;
+
         public GameState()
         {
             CurrentDie = Raylib.GetRandomValue(1, 6);
@@ -20,6 +28,7 @@ namespace DiceyStarCluster
 
         public bool PlaceDie(int col, int preferredRow = -1)
         {
+            bool isAI = !Player1Turn;
             int[][] myBoard = Player1Turn ? Player1Board : Player2Board;
             int[][] opponentBoard = Player1Turn ? Player2Board : Player1Board;
 
@@ -44,6 +53,11 @@ namespace DiceyStarCluster
             if (actualRow != -1)
             {
                 myBoard[col][actualRow] = CurrentDie;
+
+                if (isAI)
+                {
+                    AILastMove = new LastMove { Col = col, Row = actualRow, Time = (float)Raylib.GetTime() };
+                }
 
                 // Rule: "Whenever the player places a die in a row/col and the opponent has
                 // that same number in that same row/col, the opponent's die with that same number need to be removed"

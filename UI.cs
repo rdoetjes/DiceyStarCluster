@@ -259,6 +259,23 @@ namespace DiceyStarCluster
 
                     DrawGradientRoundedRect(rect, 0.2f, 9);
 
+                    // Draw AI Move Highlight
+                    if (!isPlayer1 && state.AILastMove.HasValue)
+                    {
+                        var lastMove = state.AILastMove.Value;
+                        if (lastMove.Col == col && lastMove.Row == row)
+                        {
+                            float elapsed = (float)Raylib.GetTime() - lastMove.Time;
+                            if (elapsed < 1.5f)
+                            {
+                                float alpha = 1.0f - (elapsed / 1.5f);
+                                Color highlight = Color.SkyBlue;
+                                highlight.A = (byte)(alpha * 200);
+                                Raylib.DrawRectangleRounded(rect, 0.2f, 16, highlight);
+                            }
+                        }
+                    }
+
                     if (grid[col][row] > 0)
                     {
                         Texture2D tex = isWhite ? WhiteDice[grid[col][row]] : BlackDice[grid[col][row]];
