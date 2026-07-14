@@ -14,12 +14,12 @@ namespace DiceyStarCluster
             // Use a specific timeout or at least enough time for tests
             int timeoutMs = (timeLimitSeconds > 0) ? timeLimitSeconds * 1000 : 1000;
             var cts = new CancellationTokenSource(timeoutMs);
-            
+
             int bestCol = -1;
             int currentDepth = 1;
             // Tests usually need at least depth 2 to see the multiplier benefit
             int maxDepth = (state.CurrentDifficulty == Difficulty.Easy) ? 3 : 10;
-            
+
             try {
                 // Ensure we complete at least one depth regardless of the timer for stability
                 var (firstScore, firstCol) = Minimax(state.Player1Board, state.Player2Board, state.CurrentDie, 1, false, useRandom, CancellationToken.None);
@@ -29,7 +29,7 @@ namespace DiceyStarCluster
                 while (!cts.IsCancellationRequested && currentDepth <= maxDepth)
                 {
                     var (score, col) = Minimax(state.Player1Board, state.Player2Board, state.CurrentDie, currentDepth, false, useRandom, cts.Token);
-                    
+
                     if (!cts.IsCancellationRequested && col != -1)
                     {
                         bestCol = col;
@@ -52,7 +52,7 @@ namespace DiceyStarCluster
         {
             token.ThrowIfCancellationRequested();
             List<int> availableCols = GetAvailableCols(p1Turn ? p1Board : p2Board);
-            
+
             if (availableCols.Count == 0)
             {
                 return (EvaluateBoard(p1Board, p2Board), -1);
@@ -60,16 +60,16 @@ namespace DiceyStarCluster
 
             int bestScore = p1Turn ? int.MaxValue : int.MinValue;
             List<int> tiedCols = [];
-            object lockObj = new object();
+            object lockObj = new ();
 
             // Check if we can finish this turn immediately (depth 1)
             // If depth 1, we just evaluate the immediate moves.
-            
+
             if (depth >= 3 && availableCols.Count > 1)
             {
                 System.Threading.Tasks.Parallel.ForEach(availableCols, new System.Threading.Tasks.ParallelOptions { CancellationToken = token }, col =>
                 {
-                    var result = SimulateMove(p1Board, p2Board, currentDie, depth, p1Turn, useRandom, token, col);
+                    var result = SimulateMove(p1Board, p2Board, currentDie, depth, p1Turn, useRandom, col, token);
                     lock (lockObj) { UpdateBestMove(ref bestScore, ref tiedCols, result.score, col, p1Turn); }
                 });
             }
@@ -78,7 +78,7 @@ namespace DiceyStarCluster
                 foreach (int col in availableCols)
                 {
                     token.ThrowIfCancellationRequested();
-                    var result = SimulateMove(p1Board, p2Board, currentDie, depth, p1Turn, useRandom, token, col);
+                    var result = SimulateMove(p1Board, p2Board, currentDie, depth, p1Turn, useRandom, col, token);
                     UpdateBestMove(ref bestScore, ref tiedCols, result.score, col, p1Turn);
                 }
             }
@@ -90,17 +90,17 @@ namespace DiceyStarCluster
             return (bestScore, chosenCol);
         }
 
-        private static (int score, int col) SimulateMove(int[][] p1Board, int[][] p2Board, int currentDie, int depth, bool p1Turn, bool useRandom, System.Threading.CancellationToken token, int col)
+        private static (int score, int col) SimulateMove(int[][] p1Board, int[][] p2Board, int currentDie, int depth, bool p1Turn, bool useRandom, int col, System.Threading.CancellationToken token)
         {
             int[][] nextP1 = CloneBoard(p1Board);
             int[][] nextP2 = CloneBoard(p2Board);
-            
+
             // For Player 1 (user), they click a specific row, but AI currently finds first empty row.
-            // We should evaluate all empty rows in that column for the AI too, 
+            // We should evaluate all empty rows in that column for the AI too,
             // especially now that rows matter for scoring and destruction.
-            
+
             int bestMoveScore = p1Turn ? int.MaxValue : int.MinValue;
-            
+
             for (int row = 0; row < 3; row++)
             {
                 int[][] tempP1 = CloneBoard(p1Board);
@@ -133,7 +133,7 @@ namespace DiceyStarCluster
                 if (!p1Turn) { if (currentScore > bestMoveScore || bestMoveScore == int.MinValue) bestMoveScore = currentScore; }
                 else { if (currentScore < bestMoveScore || bestMoveScore == int.MaxValue) bestMoveScore = currentScore; }
             }
-            
+
             return (bestMoveScore, col);
         }
 
