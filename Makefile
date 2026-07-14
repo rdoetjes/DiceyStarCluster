@@ -1,7 +1,16 @@
-.PHONY: tests run sbom clean
+.PHONY: tests run sbom clean release dist
 
 # Default target
 all: run
+
+release:
+	dotnet publish -c Release -r win-x64 --self-contained true
+	dotnet publish -c Release -r osx-arm64 --self-contained true
+	dotnet publish -c Release -r osx-x64 --self-contained true
+	dotnet publish -c Release -r linux-x64 --self-contained true
+
+dist:
+	bash package.sh
 
 # Run the test suite
 tests:
