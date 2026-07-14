@@ -9,122 +9,146 @@ namespace KnuckleBones
     {
         public static int GetMove(GameState state, bool useRandom = true)
         {
-            int depth = (int)state.CurrentDifficulty;
-            // Use a fixed seed for testing to avoid randomness in tests
-            var (bestScore, bestCol) = Minimax(state.Player1Board, state.Player2Board, state.CurrentDie, depth, false, useRandom: useRandom);
+            int timeLimitSeconds = (int)state.CurrentDifficulty;
+            // For tests or Easy difficulty where timeLimit might be very small,
+            // ensure we at least try to reach a decent depth.
+            var cts = new System.Threading.CancellationTokenSource(timeLimitSeconds * 1000);
+            
+            int bestCol = -1;
+            int currentDepth = 1;
+            int maxDepth = (state.CurrentDifficulty == Difficulty.Easy) ? 3 : 10;
+            
+            try {
+                // If useRandom is false (like in tests), we might want a stable result.
+                while (!cts.IsCancellationRequested && currentDepth <= maxDepth)
+                {
+                    var (score, col) = Minimax(state.Player1Board, state.Player2Board, state.CurrentDie, currentDepth, false, useRandom, cts.Token);
+                    
+                    if (!cts.IsCancellationRequested && col != -1)
+                    {
+                        bestCol = col;
+                        currentDepth++;
+                    }
+                    else break;
+                }
+            } catch (System.OperationCanceledException) {}
+
+            if (bestCol == -1)
+            {
+                var available = GetAvailableCols(state.Player2Board);
+                bestCol = available[new Random().Next(available.Count)];
+            }
+
             return bestCol;
         }
 
-        private static (int score, int col) Minimax(int[][] p1Board, int[][] p2Board, int currentDie, int depth, bool p1Turn, bool useRandom)
+        private static (int score, int col) Minimax(int[][] p1Board, int[][] p2Board, int currentDie, int depth, bool p1Turn, bool useRandom, System.Threading.CancellationToken token)
         {
+            token.ThrowIfCancellationRequested();
             List<int> availableCols = GetAvailableCols(p1Turn ? p1Board : p2Board);
-
+            
             if (availableCols.Count == 0)
             {
-                return (Rules.CalculateScore(p2Board) - Rules.CalculateScore(p1Board), -1);
+                return (EvaluateBoard(p1Board, p2Board), -1);
             }
 
             int bestScore = p1Turn ? int.MaxValue : int.MinValue;
             List<int> tiedCols = [];
-
             object lockObj = new object();
-            System.Threading.Tasks.Parallel.ForEach(availableCols, col =>
+
+            // Check if we can finish this turn immediately (depth 1)
+            // If depth 1, we just evaluate the immediate moves.
+            
+            if (depth >= 3 && availableCols.Count > 1)
             {
-                int[][] nextP1 = CloneBoard(p1Board);
-                int[][] nextP2 = CloneBoard(p2Board);
-
-                int row = GetFirstEmptyRow(p1Turn ? nextP1 : nextP2, col);
-
-                if (p1Turn)
+                System.Threading.Tasks.Parallel.ForEach(availableCols, new System.Threading.Tasks.ParallelOptions { CancellationToken = token }, col =>
                 {
-                    nextP1[col][row] = currentDie;
-                    Rules.HandleDestruction(col, row, currentDie, nextP2);
-                }
-                else
+                    var result = SimulateMove(p1Board, p2Board, currentDie, depth, p1Turn, useRandom, token, col);
+                    lock (lockObj) { UpdateBestMove(ref bestScore, ref tiedCols, result.score, col, p1Turn); }
+                });
+            }
+            else
+            {
+                foreach (int col in availableCols)
                 {
-                    nextP2[col][row] = currentDie;
-                    Rules.HandleDestruction(col, row, currentDie, nextP1);
+                    token.ThrowIfCancellationRequested();
+                    var result = SimulateMove(p1Board, p2Board, currentDie, depth, p1Turn, useRandom, token, col);
+                    UpdateBestMove(ref bestScore, ref tiedCols, result.score, col, p1Turn);
                 }
+            }
 
-                int scoreAfterMove;
+            if (tiedCols.Count == 0) return (EvaluateBoard(p1Board, p2Board), -1);
 
-                if (depth > 1 && !Rules.IsBoardFull(nextP1) && !Rules.IsBoardFull(nextP2))
-                {
-                    long averageScore = 0;
-                    for (int nextDie = 1; nextDie <= 6; nextDie++)
-                    {
-                        var (resScore, _) = Minimax(nextP1, nextP2, nextDie, depth - 1, !p1Turn, useRandom);
-                        averageScore += resScore;
-                    }
-                    scoreAfterMove = (int)(averageScore / 6);
-                }
-                else
-                {
-                    scoreAfterMove = EvaluateBoard(nextP1, nextP2);
-                }
-
-                if (depth <= 1)
-                {
-                    int p1DestructionCount = CountDifferences(p1Board, nextP1);
-                    int p2MatchCount = CountMatches(p2Board, nextP2, currentDie);
-                    
-                    if (!p1Turn)
-                    {
-                        scoreAfterMove += p1DestructionCount * 150;
-                        scoreAfterMove += p2MatchCount * 80;
-                    }
-                    else
-                    {
-                        scoreAfterMove -= p1DestructionCount * 150;
-                        scoreAfterMove -= p2MatchCount * 80;
-                    }
-                }
-
-                lock (lockObj)
-                {
-                    if (!p1Turn) // AI maximizing
-                    {
-                        if (scoreAfterMove > bestScore)
-                        {
-                            bestScore = scoreAfterMove;
-                            tiedCols.Clear();
-                            tiedCols.Add(col);
-                        }
-                        else if (scoreAfterMove == bestScore)
-                        {
-                            tiedCols.Add(col);
-                        }
-                    }
-                    else // Player minimizing
-                    {
-                        if (scoreAfterMove < bestScore)
-                        {
-                            bestScore = scoreAfterMove;
-                            tiedCols.Clear();
-                            tiedCols.Add(col);
-                        }
-                        else if (scoreAfterMove == bestScore)
-                        {
-                            tiedCols.Add(col);
-                        }
-                    }
-                }
-            });
-
+            // Stability: Always pick first tied column if not using random (for tests)
             int chosenCol = (useRandom) ? tiedCols[new Random().Next(tiedCols.Count)] : tiedCols[0];
             return (bestScore, chosenCol);
         }
 
+        private static (int score, int col) SimulateMove(int[][] p1Board, int[][] p2Board, int currentDie, int depth, bool p1Turn, bool useRandom, System.Threading.CancellationToken token, int col)
+        {
+            int[][] nextP1 = CloneBoard(p1Board);
+            int[][] nextP2 = CloneBoard(p2Board);
+            
+            // For Player 1 (user), they click a specific row, but AI currently finds first empty row.
+            // We should evaluate all empty rows in that column for the AI too, 
+            // especially now that rows matter for scoring and destruction.
+            
+            int bestMoveScore = p1Turn ? int.MaxValue : int.MinValue;
+            
+            for (int row = 0; row < 3; row++)
+            {
+                int[][] tempP1 = CloneBoard(p1Board);
+                int[][] tempP2 = CloneBoard(p2Board);
+                int[][] myBoard = p1Turn ? tempP1 : tempP2;
+                int[][] oppBoard = p1Turn ? tempP2 : tempP1;
+
+                if (myBoard[col][row] != 0) continue;
+
+                myBoard[col][row] = currentDie;
+                Rules.HandleDestruction(col, row, currentDie, oppBoard);
+
+                int currentScore;
+                if (depth > 1 && !Rules.IsBoardFull(tempP1) && !Rules.IsBoardFull(tempP2))
+                {
+                    long averageScore = 0;
+                    for (int nextDie = 1; nextDie <= 6; nextDie++)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        var (resScore, _) = Minimax(tempP1, tempP2, nextDie, depth - 1, !p1Turn, useRandom, token);
+                        averageScore += resScore;
+                    }
+                    currentScore = (int)(averageScore / 6);
+                }
+                else
+                {
+                    currentScore = EvaluateBoard(tempP1, tempP2);
+                }
+
+                if (!p1Turn) { if (currentScore > bestMoveScore || bestMoveScore == int.MinValue) bestMoveScore = currentScore; }
+                else { if (currentScore < bestMoveScore || bestMoveScore == int.MaxValue) bestMoveScore = currentScore; }
+            }
+            
+            return (bestMoveScore, col);
+        }
+
+        private static void UpdateBestMove(ref int bestScore, ref List<int> tiedCols, int scoreAfterMove, int col, bool p1Turn)
+        {
+            if (!p1Turn) // AI maximizing
+            {
+                if (scoreAfterMove > bestScore || tiedCols.Count == 0) { bestScore = scoreAfterMove; tiedCols.Clear(); tiedCols.Add(col); }
+                else if (scoreAfterMove == bestScore) { tiedCols.Add(col); }
+            }
+            else // Player minimizing
+            {
+                if (scoreAfterMove < bestScore || tiedCols.Count == 0) { bestScore = scoreAfterMove; tiedCols.Clear(); tiedCols.Add(col); }
+                else if (scoreAfterMove == bestScore) { tiedCols.Add(col); }
+            }
+        }
+
         private static int EvaluateBoard(int[][] p1Board, int[][] p2Board)
         {
-            int scoreDiff = Rules.CalculateScore(p2Board) - Rules.CalculateScore(p1Board);
-            
-            // Heuristic: Prefer keeping columns open for future high rolls
-            // and penalize boards that are close to filling up with low scores
-            int p1Empty = p1Board.Sum(col => col.Count(x => x == 0));
-            int p2Empty = p2Board.Sum(col => col.Count(x => x == 0));
-            
-            return scoreDiff + (p2Empty * 10) - (p1Empty * 10);
+            // Simple score difference - this is the ground truth
+            return Rules.CalculateScore(p2Board) - Rules.CalculateScore(p1Board);
         }
 
         private static List<int> GetAvailableCols(int[][] board)
