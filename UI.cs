@@ -85,11 +85,11 @@ namespace KnuckleBones
             // Draw Gradient Vertical Divider (9 pixels wide for symmetry)
             DrawGradientLine(new Vector2(ScreenWidth / 2, 0), new Vector2(ScreenWidth / 2, ScreenHeight), 9);
 
-            DrawPlayerGrid(state.Player1Board, 40, true, Color.White);
-            DrawPlayerGrid(state.Player2Board, 400, false, Color.White);
+            DrawPlayerGrid(state, state.Player1Board, 80, true, Color.White, true);
+            DrawPlayerGrid(state, state.Player2Board, ScreenWidth - 320, false, Color.White, false);
 
-            Raylib.DrawTextEx(GameFont, $"Player: {state.Player1Score}", new Vector2(40, 560), 24, 2, Color.White);
-            Raylib.DrawTextEx(GameFont, $"AI: {state.Player2Score}", new Vector2(400, 560), 24, 2, Color.White);
+            Raylib.DrawTextEx(GameFont, $"Player: {state.Player1Score}", new Vector2(80, 560), 24, 2, Color.White);
+            Raylib.DrawTextEx(GameFont, $"AI: {state.Player2Score}", new Vector2(ScreenWidth - 320, 560), 24, 2, Color.White);
 
             if (state.GameOver)
             {
@@ -180,24 +180,127 @@ namespace KnuckleBones
             }
         }
 
-        private static void DrawPlayerGrid(int[][] grid, int startX, bool isWhite, Color baseColor)
+        private static void DrawPlayerGrid(GameState state, int[][] grid, int startX, bool isWhite, Color baseColor, bool isPlayer1)
         {
-            int spacing = 100; // Increased from 90 (80 size + 20 spacing)
+            int spacing = 100;
+            Vector2 mousePos = Raylib.GetMousePosition();
+            int hoveredCol = -1;
+
+            // Check if mouse is hovering over Player 1's grid (the only interactive one)
+            if (state.Player1Turn && !state.GameOver)
+            {
+                int p1StartX = 80;
+                if (mousePos.X >= p1StartX && mousePos.X <= p1StartX + 3 * spacing &&
+                    mousePos.Y >= 150 && mousePos.Y <= 150 + 3 * spacing)
+                {
+                    hoveredCol = (int)((mousePos.X - p1StartX) / spacing);
+                }
+            }
+
             for (int col = 0; col < 3; col++)
+            {
                 for (int row = 0; row < 3; row++)
                 {
                     int x = startX + col * spacing;
                     int y = 150 + row * spacing;
 
                     Rectangle rect = new Rectangle(x, y, 80, 80);
+                    
+                    // Option 4: Destruction Preview
+                    // If we are drawing the AI's board (not isPlayer1) and P1 is hovering a column,
+                    // highlight matching dice in that same row on the AI's side.
+                    bool isTargeted = false;
+                    if (!isPlayer1 && hoveredCol != -1)
+                    {
+                        // The logic in GameState.PlaceDie: 
+                        // It finds the first empty row in the hoveredCol, then calls HandleDestruction(actualRow, CurrentDie, opponentBoard)
+                        // HandleDestruction removes dice in that same row across all columns.
+                        
+                        // Let's find what row the die WOULD land in
+                        int targetRow = -1;
+                        for (int r = 0; r < 3; r++)
+                        {
+                            if (state.Player1Board[hoveredCol][r] == 0)
+                            {
+                                targetRow = r;
+                                break;
+                            }
+                        }
+
+                        if (targetRow != -1 && row == targetRow && grid[col][row] == state.CurrentDie)
+                        {
+                            isTargeted = true;
+                        }
+                    }
+
+                    if (isTargeted)
+                    {
+                        // Draw a red "target" highlight
+                        Raylib.DrawRectangleRec(rect, new Color(255, 0, 0, 100));
+                    }
+
                     DrawGradientRoundedRect(rect, 0.2f, 9);
 
-                    if (grid[col][row] > 0) {
+                    if (grid[col][row] > 0)
+                    {
                         Texture2D tex = isWhite ? WhiteDice[grid[col][row]] : BlackDice[grid[col][row]];
                         float scale = 80f / tex.Width * 0.8f;
                         Raylib.DrawTextureEx(tex, new Vector2(x + (80 - tex.Width * scale) / 2, y + (80 - tex.Height * scale) / 2), 0, scale, Color.White);
                     }
                 }
+
+                // Draw Column Score Below
+                int[] colValues = Rules.GetColValues(grid, col);
+                int colScore = Rules.GetLineScore(colValues);
+                string colScoreText = colScore.ToString();
+                Vector2 colScoreSize = Raylib.MeasureTextEx(GameFont, colScoreText, 18, 2);
+                
+                // Color logic for combos
+                Color colColor = Color.SkyBlue;
+                var counts = new Dictionary<int, int>();
+                int maxCount = 0;
+                foreach(int v in colValues) if(v > 0) {
+                    if(!counts.ContainsKey(v)) counts[v] = 0;
+                    counts[v]++;
+                    maxCount = Math.Max(maxCount, counts[v]);
+                }
+                if (maxCount == 2) colColor = Color.Yellow;
+                else if (maxCount == 3) colColor = Color.Orange;
+
+                Raylib.DrawTextEx(GameFont, colScoreText, new Vector2(startX + col * spacing + (80 - colScoreSize.X) / 2, 150 + 3 * spacing + 5), 18, 2, colColor);
+            }
+
+            for (int row = 0; row < 3; row++)
+            {
+                // Draw Row Score
+                int[] rowValues = Rules.GetRowValues(grid, row);
+                int rowScore = Rules.GetLineScore(rowValues);
+                string rowScoreText = rowScore.ToString();
+                Vector2 rowScoreSize = Raylib.MeasureTextEx(GameFont, rowScoreText, 18, 2);
+
+                // Color logic for combos
+                Color rowColor = Color.SkyBlue;
+                var counts = new Dictionary<int, int>();
+                int maxCount = 0;
+                foreach(int v in rowValues) if(v > 0) {
+                    if(!counts.ContainsKey(v)) counts[v] = 0;
+                    counts[v]++;
+                    maxCount = Math.Max(maxCount, counts[v]);
+                }
+                if (maxCount == 2) rowColor = Color.Yellow;
+                else if (maxCount == 3) rowColor = Color.Orange;
+
+                if (isPlayer1)
+                {
+                    // Draw on the LEFT
+                    Raylib.DrawTextEx(GameFont, rowScoreText, new Vector2(startX - rowScoreSize.X - 15, 150 + row * spacing + (80 - rowScoreSize.Y) / 2), 18, 2, rowColor);
+                }
+                else
+                {
+                    // Draw on the RIGHT
+                    Raylib.DrawTextEx(GameFont, rowScoreText, new Vector2(startX + 3 * spacing - 20 + 15, 150 + row * spacing + (80 - rowScoreSize.Y) / 2), 18, 2, rowColor);
+                }
+            }
         }
 
         private static void DrawGradientLine(Vector2 start, Vector2 end, float totalWidth)

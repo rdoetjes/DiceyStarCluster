@@ -42,10 +42,10 @@ namespace KnuckleBones
                         }
                     }
 
-                    int grid1StartX = 40;
+                    int grid1StartX = 80;
                     int grid1StartY = 150;
                     int cellSize = 80;
-                    int stride = 100; // 80 size + 20 spacing
+                    int stride = 100;
 
                     if (mousePos.X >= grid1StartX && mousePos.X <= grid1StartX + (stride * 2) + cellSize &&
                         mousePos.Y >= grid1StartY && mousePos.Y <= grid1StartY + (stride * 2) + cellSize)
