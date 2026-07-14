@@ -143,7 +143,7 @@ jobs:
 
           # Base URL for Artifactory
           VERSION="${{ steps.versioning.outputs.tag }}"
-          BASE_URL="https://stratos01.phonax.com/artifactory/internal_release/dittle/$VERSION"
+          BASE_URL="https://stratos01.phonax.com/artifactory/internal_release/DiceyStarCluster/$VERSION"
 
           # 1. Upload Binary Artifacts
           for file in dist/*.{zip,tar.gz}; do
