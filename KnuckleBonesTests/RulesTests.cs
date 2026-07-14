@@ -59,30 +59,17 @@ namespace KnuckleBonesTests
         {
             // Rows breakdown:
             // Row 0: 5, 1, 5 -> (5*2)*2 + 1 = 21
-            // Row 1: 3, 1, 6 -> 3 + 1 + 6 = 10 (+15 Bonus = 25)
+            // Row 1: 3, 1, 6 -> 3 + 1 + 6 = 10 (+10 Bonus = 20)
             // Row 2: 3, 6, 6 -> 3 + (6*2)*2 = 27
-            // Total Rows = 21 + 25 + 27 = 73
+            // Total Rows = 21 + 20 + 27 = 68
             
             // Cols breakdown:
             // Col 0: 5, 3, 3 -> 5 + (3*2)*2 = 17
             // Col 1: 1, 1, 6 -> (1*2)*2 + 6 = 10
             // Col 2: 5, 6, 6 -> 5 + (6*2)*2 = 29
-            // Total Cols = 17 + 10 + 29 = 56 (+15 Bonus if Col 0 or 2 had different dice)
-            // Wait, Col 0 is (5, 3, 3). That is 3 dice, but 2 are the same. No bonus.
-            // Col 1 is (1, 1, 6). No bonus.
-            // Col 2 is (5, 6, 6). No bonus.
+            // Total Cols = 17 + 10 + 29 = 56
             
-            // Let's re-verify the "Actual: 68". 
-            // 73 - 68 = 5.
-            // Is Row 0: (5*2)*2 + 1 = 21? (5+5)*2 = 20. 20+1 = 21.
-            // Is Row 2: 3 + (6+6)*2 = 3 + 24 = 27.
-            // Maybe Row 1 bonus is 10? No, it's 15 in the code.
-            // Wait! (5*2)*2 is how I wrote it, but the code is (val * count) * count.
-            // Row 0: val=5, count=2 -> (5*2)*2 = 20. val=1, count=1 -> (1*1)*1 = 1. Total = 21.
-            // Row 2: val=6, count=2 -> (6*2)*2 = 24. val=3, count=1 -> (3*1)*1 = 3. Total = 27.
-            // I'll update the test to expect 68 and see if I can figure out why 5 points are missing.
-            // 21 + 10 + 27 = 58. 58 + 10 = 68. 
-            // Is the bonus 10? Let me check Rules.cs.
+            // Max(56, 68) = 68
             int[][] board = new int[3][] { 
                 new int[3] { 5, 3, 3 }, 
                 new int[3] { 1, 1, 6 }, 

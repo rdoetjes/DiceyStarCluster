@@ -10,7 +10,7 @@ namespace KnuckleBones
             // Calculate total for both axes
             int rowsScore = CalculateRowsScore(board);
             int colsScore = CalculateColsScore(board);
-            
+
             // Rule: Only the axis with the higher score counts
             return System.Math.Max(rowsScore, colsScore);
         }
@@ -66,7 +66,7 @@ namespace KnuckleBones
                 total += (val * count) * count;
             }
 
-            // Option 3: Full House / Diversity Bonus
+        // Option 3: Full House / Diversity Bonus
             if (isFull && distinctCount == 3)
             {
                 total += ALL_DIFFERNT_SCORE;
