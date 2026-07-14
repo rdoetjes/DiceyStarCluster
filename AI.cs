@@ -2,6 +2,7 @@ using Raylib_cs;
 using System.Collections.Generic;
 using System.Linq;
 using System;
+using System.Threading;
 
 namespace DiceyStarCluster
 {
@@ -10,16 +11,21 @@ namespace DiceyStarCluster
         public static int GetMove(GameState state, bool useRandom = true)
         {
             int timeLimitSeconds = (int)state.CurrentDifficulty;
-            // For tests or Easy difficulty where timeLimit might be very small,
-            // ensure we at least try to reach a decent depth.
-            var cts = new System.Threading.CancellationTokenSource(timeLimitSeconds * 1000);
+            // Use a specific timeout or at least enough time for tests
+            int timeoutMs = (timeLimitSeconds > 0) ? timeLimitSeconds * 1000 : 1000;
+            var cts = new CancellationTokenSource(timeoutMs);
             
             int bestCol = -1;
             int currentDepth = 1;
+            // Tests usually need at least depth 2 to see the multiplier benefit
             int maxDepth = (state.CurrentDifficulty == Difficulty.Easy) ? 3 : 10;
             
             try {
-                // If useRandom is false (like in tests), we might want a stable result.
+                // Ensure we complete at least one depth regardless of the timer for stability
+                var (firstScore, firstCol) = Minimax(state.Player1Board, state.Player2Board, state.CurrentDie, 1, false, useRandom, CancellationToken.None);
+                bestCol = firstCol;
+                currentDepth = 2;
+
                 while (!cts.IsCancellationRequested && currentDepth <= maxDepth)
                 {
                     var (score, col) = Minimax(state.Player1Board, state.Player2Board, state.CurrentDie, currentDepth, false, useRandom, cts.Token);
@@ -31,7 +37,7 @@ namespace DiceyStarCluster
                     }
                     else break;
                 }
-            } catch (System.OperationCanceledException) {}
+            } catch (OperationCanceledException) {}
 
             if (bestCol == -1)
             {
