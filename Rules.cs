@@ -80,15 +80,23 @@ namespace KnuckleBones
             return new int[] { board[col][0], board[col][1], board[col][2] };
         }
 
-        public static void HandleDestruction(int row, int dieValue, int[][] opponentBoard)
+        public static void HandleDestruction(int col, int row, int dieValue, int[][] opponentBoard)
         {
-            // Rule: "Whenever the player places a die in a row and the opponent has 
-            // that same number in that same row, the opponent's die with that same number need to be removed"
-            for (int col = 0; col < 3; col++)
+            // Horizontal Destruction: Remove matching dice in the same ROW
+            for (int c = 0; c < 3; c++)
             {
-                if (opponentBoard[col][row] == dieValue)
+                if (opponentBoard[c][row] == dieValue)
                 {
-                    opponentBoard[col][row] = 0;
+                    opponentBoard[c][row] = 0;
+                }
+            }
+
+            // Vertical Destruction: Remove matching dice in the same COLUMN
+            for (int r = 0; r < 3; r++)
+            {
+                if (opponentBoard[col][r] == dieValue)
+                {
+                    opponentBoard[col][r] = 0;
                 }
             }
         }

@@ -22,9 +22,9 @@ namespace KnuckleBones
 
             if (state.Player1Turn)
             {
+                Vector2 mousePos = Raylib.GetMousePosition();
                 if (Raylib.IsMouseButtonPressed(MouseButton.Left))
                 {
-                    Vector2 mousePos = Raylib.GetMousePosition();
                     // Check Difficulty Buttons
                     int startY = 620;
                     int startX = 210;
@@ -42,18 +42,27 @@ namespace KnuckleBones
                         }
                     }
 
-                    int grid1StartX = 80;
+                    int totalGridWidth = 3 * 100 - 20;
+                    int grid1StartX = (UI.ScreenWidth / 2 - totalGridWidth) / 2;
                     int grid1StartY = 150;
                     int cellSize = 80;
                     int stride = 100;
 
-                    if (mousePos.X >= grid1StartX && mousePos.X <= grid1StartX + (stride * 2) + cellSize &&
-                        mousePos.Y >= grid1StartY && mousePos.Y <= grid1StartY + (stride * 2) + cellSize)
+                    // Check if mouse is within the grid area
+                    if (mousePos.X >= grid1StartX && mousePos.X < grid1StartX + totalGridWidth &&
+                        mousePos.Y >= grid1StartY && mousePos.Y < grid1StartY + totalGridWidth)
                     {
-                        int col = (int)((mousePos.X - grid1StartX) / stride);
-                        int row = (int)((mousePos.Y - grid1StartY) / stride);
+                        // Calculate relative position within the grid
+                        float relativeX = mousePos.X - grid1StartX;
+                        int col = (int)(relativeX / stride);
+                        float cellRelX = relativeX % stride;
+                        
+                        float relativeY = mousePos.Y - grid1StartY;
+                        int row = (int)(relativeY / stride);
+                        float cellRelY = relativeY % stride;
 
-                        if (col >= 0 && col < 3 && row >= 0 && row < 3)
+                        if (col >= 0 && col < 3 && cellRelX <= cellSize &&
+                            row >= 0 && row < 3 && cellRelY <= cellSize)
                         {
                             state.PlaceDie(col, row);
                         }

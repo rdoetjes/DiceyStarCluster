@@ -45,9 +45,9 @@ namespace KnuckleBones
             {
                 myBoard[col][actualRow] = CurrentDie;
 
-                // Rule: "Whenever the player places a die in a row and the opponent has
-                // that same number in that same row, the opponent's die with that same number need to be removed"
-                Rules.HandleDestruction(actualRow, CurrentDie, opponentBoard);
+                // Rule: "Whenever the player places a die in a row/col and the opponent has
+                // that same number in that same row/col, the opponent's die with that same number need to be removed"
+                Rules.HandleDestruction(col, actualRow, CurrentDie, opponentBoard);
 
                 AdvanceTurn();
                 return true;

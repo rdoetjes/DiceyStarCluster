@@ -85,11 +85,15 @@ namespace KnuckleBones
             // Draw Gradient Vertical Divider (9 pixels wide for symmetry)
             DrawGradientLine(new Vector2(ScreenWidth / 2, 0), new Vector2(ScreenWidth / 2, ScreenHeight), 9);
 
-            DrawPlayerGrid(state, state.Player1Board, 80, true, Color.White, true);
-            DrawPlayerGrid(state, state.Player2Board, ScreenWidth - 320, false, Color.White, false);
+            int totalGridWidth = 3 * 100 - 20; // 3 cells (80) + 2 spacings (20)
+            int p1StartX = (ScreenWidth / 2 - totalGridWidth) / 2;
+            int p2StartX = ScreenWidth / 2 + (ScreenWidth / 2 - totalGridWidth) / 2;
 
-            Raylib.DrawTextEx(GameFont, $"Player: {state.Player1Score}", new Vector2(80, 560), 24, 2, Color.White);
-            Raylib.DrawTextEx(GameFont, $"AI: {state.Player2Score}", new Vector2(ScreenWidth - 320, 560), 24, 2, Color.White);
+            DrawPlayerGrid(state, state.Player1Board, p1StartX, true, Color.White, true);
+            DrawPlayerGrid(state, state.Player2Board, p2StartX, false, Color.White, false);
+
+            Raylib.DrawTextEx(GameFont, $"Player: {state.Player1Score}", new Vector2(p1StartX, 560), 24, 2, Color.White);
+            Raylib.DrawTextEx(GameFont, $"AI: {state.Player2Score}", new Vector2(p2StartX, 560), 24, 2, Color.White);
 
             if (state.GameOver)
             {
@@ -186,12 +190,18 @@ namespace KnuckleBones
             Vector2 mousePos = Raylib.GetMousePosition();
             int hoveredCol = -1;
 
+            // Calculate Grid Bounds for Hover
+            int gridWidth = 3 * spacing - 20;
+            int gridHeight = 3 * spacing - 20;
+
             // Check if mouse is hovering over Player 1's grid (the only interactive one)
             if (state.Player1Turn && !state.GameOver)
             {
-                int p1StartX = 80;
-                if (mousePos.X >= p1StartX && mousePos.X <= p1StartX + 3 * spacing &&
-                    mousePos.Y >= 150 && mousePos.Y <= 150 + 3 * spacing)
+                int totalGridWidth = 3 * 100 - 20;
+                int p1StartX = (ScreenWidth / 2 - totalGridWidth) / 2;
+                
+                if (mousePos.X >= p1StartX && mousePos.X <= p1StartX + gridWidth &&
+                    mousePos.Y >= 150 && mousePos.Y <= 150 + gridHeight)
                 {
                     hoveredCol = (int)((mousePos.X - p1StartX) / spacing);
                 }
@@ -207,29 +217,27 @@ namespace KnuckleBones
                     Rectangle rect = new Rectangle(x, y, 80, 80);
                     
                     // Option 4: Destruction Preview
-                    // If we are drawing the AI's board (not isPlayer1) and P1 is hovering a column,
-                    // highlight matching dice in that same row on the AI's side.
+                    // If we are drawing the AI's board (not isPlayer1) and P1 is hovering a column/row,
+                    // highlight matching dice in that same row or column on the AI's side.
                     bool isTargeted = false;
                     if (!isPlayer1 && hoveredCol != -1)
                     {
-                        // The logic in GameState.PlaceDie: 
-                        // It finds the first empty row in the hoveredCol, then calls HandleDestruction(actualRow, CurrentDie, opponentBoard)
-                        // HandleDestruction removes dice in that same row across all columns.
-                        
-                        // Let's find what row the die WOULD land in
-                        int targetRow = -1;
-                        for (int r = 0; r < 3; r++)
-                        {
-                            if (state.Player1Board[hoveredCol][r] == 0)
-                            {
-                                targetRow = r;
-                                break;
-                            }
-                        }
+                        // Find what row the die WOULD land in if the user clicks this cell
+                        // Since we now allow clicking specific cells, we check the specific row.
+                        int targetRow = (int)((mousePos.Y - 150) / spacing);
 
-                        if (targetRow != -1 && row == targetRow && grid[col][row] == state.CurrentDie)
+                        if (targetRow >= 0 && targetRow < 3)
                         {
-                            isTargeted = true;
+                            // Check Column Destruction (Vertical)
+                            if (col == hoveredCol && grid[col][row] == state.CurrentDie)
+                            {
+                                isTargeted = true;
+                            }
+                            // Check Row Destruction (Horizontal)
+                            if (row == targetRow && grid[col][row] == state.CurrentDie)
+                            {
+                                isTargeted = true;
+                            }
                         }
                     }
 

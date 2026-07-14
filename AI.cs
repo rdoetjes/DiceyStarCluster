@@ -37,12 +37,12 @@ namespace KnuckleBones
                 if (p1Turn)
                 {
                     nextP1[col][row] = currentDie;
-                    Rules.HandleDestruction(row, currentDie, nextP2);
+                    Rules.HandleDestruction(col, row, currentDie, nextP2);
                 }
                 else
                 {
                     nextP2[col][row] = currentDie;
-                    Rules.HandleDestruction(row, currentDie, nextP1);
+                    Rules.HandleDestruction(col, row, currentDie, nextP1);
                 }
 
                 int scoreAfterMove;
