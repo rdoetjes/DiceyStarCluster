@@ -118,12 +118,8 @@ namespace DiceyStarCluster
             state.Player2Board = new int[3][] { new int[3], new int[3], new int[3] };
             state.GameOver = false;
             state.Player1Turn = true;
-            state.CurrentDie = Raylib.GetRandomValue(1, 6);
             state.AILastMove = null;
-            state.CurrentDieRoll = new GameState.DieRollState { 
-                Value = state.CurrentDie, 
-                StartTime = (float)Raylib.GetTime() 
-            };
+            state.RollDie();
         }
     }
 }

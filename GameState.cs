@@ -30,6 +30,11 @@ namespace DiceyStarCluster
 
         public GameState()
         {
+            RollDie();
+        }
+
+        public void RollDie()
+        {
             CurrentDie = Raylib.GetRandomValue(1, 6);
             CurrentDieRoll = new DieRollState { Value = CurrentDie, StartTime = (float)Raylib.GetTime() };
         }
@@ -87,8 +92,7 @@ namespace DiceyStarCluster
             if (!GameOver)
             {
                 Player1Turn = !Player1Turn;
-                CurrentDie = Raylib.GetRandomValue(1, 6);
-                CurrentDieRoll = new DieRollState { Value = CurrentDie, StartTime = (float)Raylib.GetTime() };
+                RollDie();
             }
         }
     }
