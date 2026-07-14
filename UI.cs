@@ -14,6 +14,7 @@ namespace DiceyStarCluster
         private static Font GameFont;
         private readonly static Texture2D[] WhiteDice = new Texture2D[7];
         private readonly static Texture2D[] BlackDice = new Texture2D[7];
+        private static Texture2D BgImg = new();
 
         private struct Star
         {
@@ -34,7 +35,7 @@ namespace DiceyStarCluster
             {
                 string potentialPath = Path.Combine(currentDir, "resources");
                 if (Directory.Exists(potentialPath)) { resourcesPath = potentialPath; break; }
-                potentialPath = Path.Combine(currentDir, "knucklebones", "resources");
+                potentialPath = Path.Combine(currentDir, "diceystarcluster", "resources");
                 if (Directory.Exists(potentialPath)) { resourcesPath = potentialPath; break; }
                 currentDir = Path.GetDirectoryName(currentDir) ?? "";
             }
@@ -51,6 +52,7 @@ namespace DiceyStarCluster
                 WhiteDice[i] = Raylib.LoadTexture(Path.Combine(resourcesPath, "img", $"{i}_white.png"));
                 BlackDice[i] = Raylib.LoadTexture(Path.Combine(resourcesPath, "img", $"{i}_black.png"));
             }
+            BgImg = Raylib.LoadTexture(Path.Combine(resourcesPath, "img", "bg.png"));
 
             for (int i = 0; i < StarCount; i++)
                 ResetStar(ref starfield[i], true);
@@ -76,10 +78,16 @@ namespace DiceyStarCluster
                 Raylib.UnloadTexture(WhiteDice[i]);
                 Raylib.UnloadTexture(BlackDice[i]);
             }
+            Raylib.UnloadTexture(BgImg);
         }
 
         public static void DrawBoard(GameState state)
         {
+            Raylib.ClearBackground(Color.Black);
+
+            // draw background
+            Raylib.DrawTextureEx(BgImg, new Vector2(-400,-200), 0.0f, 2.0f, Color.White);
+
             DrawWarpStarfield();
 
             // Draw Gradient Vertical Divider (9 pixels wide for symmetry)
@@ -119,7 +127,7 @@ namespace DiceyStarCluster
             {
                 Raylib.DrawTextEx(GameFont, "Current Roll:", new Vector2(ScreenWidth/2 - 55, 10), 20, 2, Color.SkyBlue);
                 Texture2D rollTex = state.Player1Turn ? WhiteDice[state.CurrentDie] : BlackDice[state.CurrentDie];
-                
+
                 // Animation for current die roll: zoom in and overshoot
                 float elapsed = (float)Raylib.GetTime() - state.CurrentDieRoll.StartTime;
                 float duration = 0.25f;
@@ -129,14 +137,14 @@ namespace DiceyStarCluster
                 {
                     // Ease Out Back: t: current time, b: beginning value, c: change in value, d: duration, s: overshoot amount
                     float t = elapsed / duration;
-                    float s = 1.70158f; 
+                    float s = 1.70158f;
                     float backFactor = (t - 1) * (t - 1) * ((s + 1) * (t - 1) + s) + 1;
                     scale = backFactor * 0.5f;
                 }
 
                 Vector2 pos = new Vector2(ScreenWidth/2 - (rollTex.Width * scale)/2, 35 + (rollTex.Height * 0.5f - rollTex.Height * scale)/2);
                 Raylib.DrawTextureEx(rollTex, pos, 0, scale, Color.White);
-                
+
                 string turnText = state.Player1Turn ? "<< Your Turn" : "AI Thinking >>";
                 Raylib.DrawTextEx(GameFont, turnText, new Vector2(ScreenWidth/2 - 60, 125), 20, 2, state.Player1Turn ? Color.White : Color.Gray);
             }
@@ -145,7 +153,6 @@ namespace DiceyStarCluster
 
         private static void DrawWarpStarfield()
         {
-            Raylib.ClearBackground(Color.Black);
             float dt = Raylib.GetFrameTime();
             for (int i = 0; i < StarCount; i++)
             {
