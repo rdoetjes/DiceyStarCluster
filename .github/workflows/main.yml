@@ -160,7 +160,7 @@ jobs:
             SHA1=$(sha1sum "$file" | awk '{print $1}')
 
             echo "Uploading $filename as $new_name"
-            curl --fail-with-body -s -u "ci:$pass" -X PUT -T "$file" \
+            curl --fail-with-body -u "ci:$pass" -X PUT -T "$file" \
               -H "X-Checksum-Md5: $MD5" -H "X-Checksum-Sha1: $SHA1" \
               "$BASE_URL/$new_name"
           done
