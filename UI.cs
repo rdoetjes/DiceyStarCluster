@@ -90,9 +90,6 @@ namespace DiceyStarCluster
 
             DrawWarpStarfield();
 
-            // Draw Gradient Vertical Divider (9 pixels wide for symmetry)
-            DrawGradientLine(new Vector2(ScreenWidth / 2, 0), new Vector2(ScreenWidth / 2, ScreenHeight), 9);
-
             int totalGridWidth = 3 * 100 - 20; // 3 cells (80) + 2 spacings (20)
             int p1StartX = (ScreenWidth / 2 - totalGridWidth) / 2;
             int p2StartX = ScreenWidth / 2 + (ScreenWidth / 2 - totalGridWidth) / 2;
@@ -170,7 +167,7 @@ namespace DiceyStarCluster
                 float distFromCenterNormY = Math.Abs(y - ScreenHeight / 2) / (ScreenHeight / 2);
                 float maxDist = Math.Max(distFromCenterNormX, distFromCenterNormY);
                 Color starColor = Color.White;
-                byte alpha = (byte)Math.Clamp(255 - (z / 2000 * 150), 100, 255); // Reduced falloff, higher minimum alpha
+                byte alpha = (byte)Math.Clamp(255 - (z / 2000 * 200), 40, 255); // More transparent distant stars
                 starColor.A = alpha;
                 if (maxDist > 1.0f - edgeThreshold) {
                     float intensity = Math.Clamp((maxDist - (1.0f - edgeThreshold)) / edgeThreshold, 0, 1);
@@ -182,7 +179,9 @@ namespace DiceyStarCluster
                 }
                 Raylib.DrawLineEx(new Vector2(px, py), new Vector2(x, y), Math.Clamp(3.0f / (z / 500), 1.5f, 6.0f), starColor); // Increased thickness
             }
-            Raylib.DrawRectangle(0, 0, ScreenWidth, ScreenHeight, new Color(0, 0, 0, 130)); // Slightly lighter overlay (was 160)
+
+            // Subtle dark overlay to help the UI stand out
+            Raylib.DrawRectangle(0, 0, ScreenWidth, ScreenHeight, new Color(0, 0, 0, 60));
         }
 
         private static Color ColorFromHSV(float hue, float saturation, float value)
